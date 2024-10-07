@@ -11,10 +11,11 @@ export const createRole = async (req, res) => {
   res.status(201).json({
     success: true,
     message: "Role created Successfully",
+    
   });
 };
 export const getRoles = async (req, res) => {
-  const roles = await Role.find();
+  const roles = await Role.find({isRoleDeleted:false});
   res.status(200).json({
     success: true,
     data: roles,
@@ -23,11 +24,10 @@ export const getRoles = async (req, res) => {
 
 export const deleteRole = async(req,res)=>{
   const {roleId}=req.params;
-  const existingRole = await Role.findById(roleId);
-  if(!existingRole){
-    throw new CustomError("Role does not exist", 500);
+  if(!roleId){
+    throw new CustomError("please fill all the fields", 400);
   }
-  const result = await Role.findByIdAndDelete(roleId);
+  const result = await Role.findByIdAndUpdate(roleId,{isRoleDeleted:true});
   res.status(200).json({
     success:true,
     message:"Role deleted successfully"
@@ -37,6 +37,10 @@ export const deleteRole = async(req,res)=>{
 export const updateRoles = async(req,res)=>{
   const {roleId}=req.params;
   const {name}=req.body;
+  if(!roleId || !name)
+  {
+    throw new CustomError("Please fill all the fields", 400);
+  }
   const existingRole = await Role.findById(roleId);
   if(!existingRole){
     throw new CustomError("Role does not exist",500);

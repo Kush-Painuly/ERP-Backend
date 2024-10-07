@@ -1,8 +1,17 @@
 import { Router } from "express";
-import { catchAsync } from "../middlewares/index.js";
-import { createPermission } from "../controllers/index.js";
+import { catchAsync, upload, verifyJWT } from "../middlewares/index.js";
+import { createPermission, getPermissions } from "../controllers/index.js";
 
 export const permissionRoutes = Router();
 
+permissionRoutes.post(
+  "/create-permission",
+  upload.single("PermissionFile"),
+  catchAsync(createPermission)
+);
 
-permissionRoutes.post("/create-permission",catchAsync(createPermission));
+permissionRoutes.get(
+  "/",
+  //  verifyJWT,
+  catchAsync(getPermissions)
+);

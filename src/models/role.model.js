@@ -4,6 +4,10 @@ const userRole = new Schema({
     name:{
         type:String,
         required:true
+    },
+    isRoleDeleted:{
+        type:Boolean,
+        default:false
     }
 })
 

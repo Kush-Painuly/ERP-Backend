@@ -1,61 +1,104 @@
 import { CustomError } from "../utils/index.js";
-import { Department } from "../models/index.js";
-export const createDept = async (req, res, next) => {
-  const { name } = req.body;
-  //santize the values
+import { Department, User } from "../models/index.js";
+import mongoose from "mongoose";
+
+export const createDept = async (req, res) => {
+  const { name, managerId } = req.body;
+
   if (!name) {
-    throw new CustomError("Please fill all the fields", 400);
+    throw new CustomError("Please fill all the fields.", 400);
   }
+  const session = await mongoose.startSession();
 
-  const department = await Department.create({ name });
+  try {
+    session.startTransaction();
 
-  res.status(201).json({
-    success: true,
-    department,
-    message: "Department Created Successfully",
-  });
+    const department = await Department.create([{ name, managerId }], {
+      session,
+    });
+
+    if (managerId) {
+      await User.findByIdAndUpdate(
+        managerId,
+        { deptId: department._id },
+        { session }
+      );
+    }
+    await session.commitTransaction();
+    res.status(201).json({
+      success: true,
+      department,
+      message: "Department created successfully.",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+
+    return res.status(500).json({ message: "Unable to create Department" });
+  } finally {
+    session.endSession();
+  }
 };
 
-export const getDepts = async (req, res, next) => {
-  const departments = await Department.find();
+export const getDepts = async (req, res) => {
+  const departments = await Department.find({ isDeptDeleted: false }).populate({
+    path: "managerId",
+    select: "name email",
+  });
+
   res.status(200).json({
     success: true,
     data: departments,
   });
 };
 
-export const deleteDepts = async(req, res, next) => {
+export const deleteDepts = async (req, res) => {
   const { deptId } = req.params;
 
   const department = await Department.findById(deptId);
 
-  if(!department){
+  if (!department) {
     throw new CustomError("Department does not exist", 400);
   }
 
-  const result = await Department.findByIdAndDelete(deptId);
-  
+  await Department.findByIdAndUpdate(deptId, {
+    isDeptDeleted: true,
+  });
+
   res
     .status(200)
-    .json({ success: true, message: "department deleted successfully!" });
+    .json({ success: true, message: "Department deleted successfully." });
 };
 
-export const updatedDepts = async(req, res, next) => {
+export const updateDepts = async (req, res) => {
   const { deptId } = req.params;
-  const { name } = req.body;
+  const { name, managerId } = req.body;
 
-  if (!name || !deptId) {
-    throw new CustomError("Please fill all the fields", 400);
+  if (!name || !deptId || !managerId) {
+    throw new CustomError("Please fill all the fields.", 400);
   }
 
-  const existingDept = await Department.findById(deptId); 
+  const existingDept = await Department.findById(deptId, { session });
 
   if (!existingDept) {
-    throw new CustomError("No department found with this id", 404);
+    throw new CustomError("Department does not exist.", 400);
   }
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
 
-  const result = await Department.findByIdAndUpdate(deptId, {name});
-  res
-    .status(200)
-    .json({ success: true, message: "Department updated successfully" });
+    await Department.findByIdAndUpdate(deptId, req.body, { session });
+
+    await User.findByIdAndUpdate(managerId, { deptId }, { session });
+
+    await session.commitTransaction();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Department updated successfully." });
+  } catch (err) {
+    await session.abortTransaction();
+    return res.status(500).json({ message: "Unable to update department" });
+  } finally {
+    session.endSession();
+  }
 };

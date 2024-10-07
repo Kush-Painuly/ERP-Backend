@@ -1,16 +1,24 @@
 import { Schema, model } from "mongoose";
 
-const deptSchema = new Schema({
-    name:{
-        type: String,
-        required: true
+const deptSchema = new Schema(
+  {
+    name: {
+      type: String,
+      required: true,
     },
-    mangerId:{
-        type: Schema.Types.ObjectId,
-        required:false
+    managerId: {
+      type: Schema.Types.ObjectId,
+      required: false,
+      ref: "User",
     },
-},
-{timestamps:true}
+    isDeptDeleted: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  }
 );
 
-export const Department =  model("Department", deptSchema);
+export const Department = model("Department", deptSchema);
